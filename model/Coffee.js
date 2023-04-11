@@ -13,6 +13,11 @@ const coffeeSchema = new Schema(
       ref: "User",
       required: true,
     },
+    on: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Video",
+      required: true,
+    },
   },
   { timestamps: { createdAt: "created_at" } }
 );

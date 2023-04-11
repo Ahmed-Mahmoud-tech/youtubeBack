@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+// ##################### select field from get all for video
 
 const videoSchema = new Schema(
   {
@@ -27,6 +28,10 @@ const videoSchema = new Schema(
       type: String,
       required: true,
     },
+    videoImage: {
+      type: String,
+      required: true,
+    },
     type: {
       type: String,
       required: true,
@@ -45,11 +50,7 @@ const videoSchema = new Schema(
     endSecond: {
       type: String,
     },
-    list: [
-      {
-        type: String,
-      },
-    ],
+
     notify: {
       type: String,
     },
@@ -65,10 +66,10 @@ const videoSchema = new Schema(
       type: [mongoose.Schema.Types.ObjectId],
       default: [],
     },
-    authorId: {
+    author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      // required: true,
+      required: true,
     },
     like: {
       type: [mongoose.Schema.Types.ObjectId],
@@ -77,6 +78,15 @@ const videoSchema = new Schema(
 
     dislike: {
       type: [mongoose.Schema.Types.ObjectId],
+      default: [],
+    },
+    coffee: {
+      type: [mongoose.Schema.Types.ObjectId],
+      default: [],
+    },
+    report: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Report",
       default: [],
     },
     comments: [

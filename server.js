@@ -44,10 +44,15 @@ app.use("/api/register", require("./routes/register"));
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/logout", require("./routes/logout"));
 app.use("/api/video", require("./routes/api/videoRouter"));
+app.use("/api/comment", require("./routes/api/commentRouter"));
+app.use("/api/list", require("./routes/api/listRouter"));
+app.use("/api/search", require("./routes/api/searchRouter"));
 
 app.use(verifyJWT);
-app.use("/employees", require("./routes/api/employees"));
+app.use("/api/report", require("./routes/api/reportRouter"));
+app.use("/api/coffee", require("./routes/api/coffeeRouter"));
 app.use("/users", require("./routes/api/users"));
+app.use("/employees", require("./routes/api/employees"));
 
 app.all("*", (req, res) => {
   res.status(404);

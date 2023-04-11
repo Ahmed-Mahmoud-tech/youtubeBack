@@ -11,7 +11,7 @@ router
   .post(
     verifyJWT,
     // verifyRoles(ROLES_LIST.User),
-    createFile("uploads/audio", ".mp3", "blob"),
+    createFile("uploads/audio", ".mp3", "blob", "path"),
     videoController.createNewVideo
   )
   .get(videoController.getAllVideos)

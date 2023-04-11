@@ -10,7 +10,7 @@ const reportSchema = new Schema(
     comment: {
       type: String,
     },
-    authorId: {
+    author: {
       type: String,
       ref: "User",
       required: true,

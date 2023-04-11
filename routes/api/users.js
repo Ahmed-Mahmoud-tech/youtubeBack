@@ -14,7 +14,7 @@ router
   .route("/:id")
   .patch(
     verifyRoles(ROLES_LIST.User),
-    createFile(createFile("uploads/avatar", ".jpeg", "avatar")),
+    createFile("uploads/avatar", ".jpeg", "avatar", "avatar"),
     usersController.patchUser
   )
   .get(verifyRoles(ROLES_LIST.User), usersController.getUser);

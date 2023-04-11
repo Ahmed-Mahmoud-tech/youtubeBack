@@ -61,15 +61,15 @@ const verifyJWT = (req, res, next) => {
           res.set({ token: accessToken });
 
           req.user = foundUser.username;
-          req.roles = foundUser.roles;
-          req.id = foundUser._id;
+          req.roles = Object.values(foundUser.roles);
+          req.userId = foundUser._id;
           next();
         }
       );
     } else {
       req.user = decoded.UserInfo.username;
-      req.roles = decoded.UserInfo.roles;
-      req.id = decoded.UserInfo.id;
+      req.roles = Object.values(decoded.UserInfo.roles);
+      req.userId = decoded.UserInfo.id;
       next();
     }
   });

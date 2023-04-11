@@ -47,6 +47,15 @@ const userSchema = new Schema({
     ref: "User",
     default: [],
   },
+  mainVideo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Video",
+  },
+  usersSubscribe: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: "User",
+    default: [],
+  },
   like: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: "Video",
@@ -62,27 +71,12 @@ const userSchema = new Schema({
     ref: "User",
     default: [],
   },
-  report: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: "Report",
-    default: [],
-  },
-  usersReport: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: "Report",
-    default: [],
-  },
   watchLater: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: "Video",
     default: [],
   },
   coffee: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: "Coffee",
-    default: [],
-  },
-  usersCoffee: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: "Coffee",
     default: [],

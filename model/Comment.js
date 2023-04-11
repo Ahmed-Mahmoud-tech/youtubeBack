@@ -2,6 +2,15 @@ const mongoose = require("mongoose");
 
 const commentSchema = new mongoose.Schema(
   {
+    commentOn: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+    type: {
+      type: String,
+      enum: ["video", "comment"],
+      default: "video",
+      message: "{VALUE} is not a valid comment",
+    },
     text: {
       type: String,
       required: true,
@@ -11,15 +20,17 @@ const commentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    liked: {
+    like: {
       type: [mongoose.Schema.Types.ObjectId],
-      default: [null],
+      default: null,
+      unique: true,
     },
     dislike: {
       type: [mongoose.Schema.Types.ObjectId],
-      default: [null],
+      default: null,
+      unique: true,
     },
-    comment: [
+    comments: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Comment",

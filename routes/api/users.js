@@ -4,6 +4,7 @@ const router = express.Router();
 const usersController = require("../../controllers/usersController");
 const ROLES_LIST = require("../../config/roles_list");
 const verifyRoles = require("../../middleware/verifyRoles");
+const verifyJWT = require("../../middleware/verifyJWT");
 
 router
   .route("/")
@@ -14,9 +15,10 @@ router
   .route("/:id")
   .patch(
     verifyRoles(ROLES_LIST.User),
-    createFile("uploads/avatar", ".jpeg", "avatar", "avatar"),
+    createFile("uploads/avatar", "avatar", ".jpeg", "avatar", "avatar"),
     usersController.patchUser
   )
   .get(verifyRoles(ROLES_LIST.User), usersController.getUser);
+router.route("/token").get(verifyJWT, usersController.getUser);
 
 module.exports = router;

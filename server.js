@@ -37,6 +37,7 @@ app.use(cookieParser());
 
 //serve static files
 app.use("/", express.static(path.join(__dirname, "/public")));
+app.use("/", express.static(path.join(__dirname, "/uploads")));
 
 // routes
 app.use("/", require("./routes/root"));
@@ -51,7 +52,7 @@ app.use("/api/search", require("./routes/api/searchRouter"));
 app.use(verifyJWT);
 app.use("/api/report", require("./routes/api/reportRouter"));
 app.use("/api/coffee", require("./routes/api/coffeeRouter"));
-app.use("/users", require("./routes/api/users"));
+app.use("/api/users", require("./routes/api/users"));
 app.use("/employees", require("./routes/api/employees"));
 
 app.all("*", (req, res) => {

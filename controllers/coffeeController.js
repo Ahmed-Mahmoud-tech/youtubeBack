@@ -42,7 +42,7 @@ const createNewCoffee = async (req, res) => {
       console.error(err);
     }
   } else {
-    return res.status(400).json({ message: "required filed error" });
+    return res.status(400).json({ message: "required field error" });
   }
 };
 

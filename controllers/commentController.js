@@ -1,5 +1,7 @@
+const { default: mongoose } = require("mongoose");
 const Comment = require("../model/Comment");
 const Video = require("../model/Video");
+const { toggleLike } = require("../services/utilities");
 
 const createNewComment = async (req, res) => {
   if (req.body.text) {
@@ -17,7 +19,7 @@ const createNewComment = async (req, res) => {
       console.error(err);
     }
   } else {
-    return res.status(400).json({ message: "required filed error" });
+    return res.status(400).json({ message: "required field error" });
   }
 };
 
@@ -34,12 +36,6 @@ const patchComment = async (req, res) => {
   //   return res.status(400).send({ error: "Invalid updates!" });
   // }
 
-  const toggleLike = async (Model, filed, userId, updatedModel, value) => {
-    Model.findByIdAndUpdate(updatedModel, {
-      [value]: { [filed]: userId },
-    }).exec();
-  };
-
   try {
     const comment = await Comment.findById(req.params.id);
     if (!comment) {
@@ -52,11 +48,25 @@ const patchComment = async (req, res) => {
     }
 
     if (req.body.like != null) {
-      toggleLike(Comment, "like", req.userId, comment._id, req.body.like);
+      toggleLike(
+        Comment,
+        "like",
+        "dislike",
+        req.userId,
+        comment._id,
+        req.body.like
+      );
     }
 
     if (req.body.dislike != null) {
-      toggleLike(Comment, "dislike", req.userId, comment._id, req.body.dislike);
+      toggleLike(
+        Comment,
+        "dislike",
+        "like",
+        req.userId,
+        comment._id,
+        req.body.dislike
+      );
     }
 
     res.send(comment);
@@ -135,27 +145,80 @@ const getComment = async (req, res) => {
       ? Comment
       : null;
 
-  const comment = await Model.findById({ _id: req.params.id })
-    .populate({ path: "comments", select: ["like", "dislike", "text"] })
-    .exec();
+  // const comment = await Model.findById({ _id: req.params.id })
+  //   .populate({ path: "comments", select: ["like", "dislike", "text", "_"] })
+  //   .exec();
 
-  const result = [];
-  for (singleComment of comment.comments) {
-    const commentInfo = {};
-    if (singleComment.like.includes(req.userId)) {
-      commentInfo.userLike = true;
-    } else {
-      commentInfo.userLike = false;
-    }
-    if (singleComment.dislike.includes(req.userId)) {
-      commentInfo.userDislike = true;
-    } else {
-      commentInfo.userDislike = false;
-    }
-    commentInfo.text = singleComment.text;
-    result.push(commentInfo);
-  }
-  res.json(result);
+  // const result = [];
+  // for (singleComment of comment.comments) {
+  //   const commentInfo = {};
+  //   if (singleComment.like.includes(req.userId)) {
+  //     commentInfo.userLike = true;
+  //   } else {
+  //     commentInfo.userLike = false;
+  //   }
+  //   if (singleComment.dislike.includes(req.userId)) {
+  //     commentInfo.userDislike = true;
+  //   } else {
+  //     commentInfo.userDislike = false;
+  //   }
+  //   commentInfo.text = singleComment.text;
+  //   result.push(commentInfo);
+  // }
+  // res.json(result);
+
+  const comment = await Model.aggregate([
+    { $match: { _id: mongoose.Types.ObjectId(req.params.id) } },
+
+    {
+      $lookup: {
+        from: "comments",
+        localField: "comments",
+        foreignField: "_id",
+        as: "comments",
+      },
+    },
+    {
+      $unwind: "$comments",
+    },
+    {
+      $sort: { "comments.createdAt": -1 },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "comments.author",
+        foreignField: "_id",
+        as: "author",
+      },
+    },
+    {
+      $unwind: "$author",
+    },
+    {
+      $project: {
+        _id: "$comments._id",
+        text: "$comments.text",
+        "commentUser.username": "$author.username",
+        "commentUser._id": "$author._id",
+        "commentUser.avatar": "$author.avatar",
+        like: {
+          $size: "$comments.like",
+        },
+        dislike: {
+          $size: "$comments.dislike",
+        },
+        isLike: {
+          $cond: [{ $in: [req.userId, "$comments.like"] }, true, false],
+        },
+        isDislike: {
+          $cond: [{ $in: [req.userId, "$comments.dislike"] }, true, false],
+        },
+        comments: "$comments.comments",
+      },
+    },
+  ]);
+  res.json(comment);
 };
 
 module.exports = {

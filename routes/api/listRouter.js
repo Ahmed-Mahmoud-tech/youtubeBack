@@ -3,6 +3,7 @@ const router = express.Router();
 const listController = require("../../controllers/listController");
 const verifyJWT = require("../../middleware/verifyJWT");
 
+router.route("/userlist").get(verifyJWT, listController.getUserList);
 router
   .route("/")
   .post(verifyJWT, listController.createNewList)

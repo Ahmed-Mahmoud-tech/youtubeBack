@@ -11,20 +11,25 @@ router
   .post(
     verifyJWT,
     // verifyRoles(ROLES_LIST.User),
-    createFile("uploads/audio", ".mp3", "blob", "path"),
+    createFile("uploads/audio", "audio", ".mp3", "blob", "path"),
     videoController.createNewVideo
   )
-  .get(videoController.getAllVideos)
+  .get(videoController.getAllVideos);
+
+router
+  .route("/:id")
+  .get(videoController.getVideo)
+  .patch(
+    verifyJWT,
+    // verifyRoles(ROLES_LIST.User),
+    videoController.patchVideo
+  )
   .delete(
     verifyJWT,
     //verifyRoles(ROLES_LIST.User),
     videoController.deleteVideo
   );
 
-router.route("/:id").get(videoController.getVideo).patch(
-  verifyJWT,
-  // verifyRoles(ROLES_LIST.User),
-  videoController.patchVideo
-);
+router.route("/auth/:id").get(verifyJWT, videoController.getVideo);
 
 module.exports = router;

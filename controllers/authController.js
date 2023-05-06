@@ -55,7 +55,28 @@ const handleLogin = async (req, res) => {
     });
 
     // Send authorization roles and access token to user
-    res.json({ accessToken });
+
+    const userInfoKeys = [
+      "username",
+      "roles",
+      "avatar",
+      "fullName",
+      "age",
+      "email",
+      "phone",
+      "mainVideo",
+    ];
+    const userInfo = {};
+    for (let index = 0; index < userInfoKeys.length; index++) {
+      if ([userInfoKeys[index]] == "roles") {
+        userInfo["roles"] = Object.keys(foundUser[userInfoKeys[index]]);
+      } else {
+        userInfo[userInfoKeys[index]] = foundUser[userInfoKeys[index]];
+      }
+    }
+    userInfo.accessToken = accessToken;
+    // foundUser._doc.accessToken = accessToken;
+    res.json({ userInfo });
   } else {
     res.sendStatus(401);
   }

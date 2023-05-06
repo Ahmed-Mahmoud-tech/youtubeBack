@@ -1,7 +1,13 @@
 const Video = require("../model/Video");
+const Report = require("../model/Report");
 const fs = require("fs");
 const path = require("path");
-const { videoImage } = require("../services/videoImage");
+const { getId, videoImage } = require("../services/videoImage");
+const { default: mongoose } = require("mongoose");
+const User = require("../model/User");
+const { arrayUpdate } = require("../services/utilities");
+const { toggleLike } = require("../services/utilities");
+const List = require("../model/List");
 
 const getAllVideos = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
@@ -39,17 +45,28 @@ const createNewVideo = async (req, res) => {
     req.body.startSecond
   ) {
     try {
-      await Video.create({
+      if (req.body.list) {
+        req.body.list = mongoose.Types.ObjectId(req.body.list);
+      }
+
+      const videoCreation = await Video.create({
         ...req.body,
         author: req.userId,
         videoImage: videoImage(req.body.videoLink),
       });
+
+      if (req.body.list) {
+        await List.findByIdAndUpdate(req.body.list, {
+          $push: { video: videoCreation._id },
+        });
+      }
+
       res.status(201).send("created successfully");
     } catch (err) {
       console.error(err);
     }
   } else {
-    return res.status(400).json({ message: "required filed error" });
+    return res.status(400).json({ message: "required field error" });
   }
 };
 
@@ -69,7 +86,7 @@ const createNewVideo = async (req, res) => {
 // PATCH /videos/:id
 
 const patchVideo = async (req, res) => {
-  const updates = Object.keys(req.body);
+  console.log("00000000000000000000000000000000000000000000000000000");
 
   //! patch validation
   // const allowedUpdates = ["name", "email", "password"];
@@ -87,8 +104,31 @@ const patchVideo = async (req, res) => {
       return res.status(404).send();
     }
 
-    updates.forEach((update) => (video[update] = req.body[update]));
-    console.log({ body: req.body }, { updates }, { video });
+    if (req.body.like != null) {
+      toggleLike(
+        Video,
+        "like",
+        "dislike",
+        req.userId,
+        video._id,
+        req.body.like
+      );
+      delete req.body.like;
+    } else if (req.body.dislike != null) {
+      toggleLike(
+        Video,
+        "dislike",
+        "like",
+        req.userId,
+        video._id,
+        req.body.dislike
+      );
+      delete req.body.dislike;
+    } else {
+      const updates = Object.keys(req.body);
+      updates.forEach((update) => (video[update] = req.body[update]));
+    }
+
     await video.save();
 
     res.send(video);
@@ -99,16 +139,16 @@ const patchVideo = async (req, res) => {
 };
 
 const deleteVideo = async (req, res) => {
-  if (!req?.body?.id)
+  if (!req?.params?.id)
     return res.status(400).json({ message: "Video ID required." });
 
   // const video = await Video.findByIdAndDelete(req.body.id);
-  const video = await Video.findById(req.body.id);
+  const video = await Video.findById(req.params.id);
 
   if (!video) {
     return res
       .status(404)
-      .json({ message: `No video matches ID ${req.body.id}.` });
+      .json({ message: `No video matches ID ${req.params.id}.` });
   }
 
   if (req.userId !== video.author) {
@@ -131,7 +171,7 @@ const deleteVideo = async (req, res) => {
     await getAllCommentIds(video.comments);
     await Comment.deleteMany({ _id: { $in: commentIds } });
     // delete video itself
-    await Video.findByIdAndDelete(req.body.id);
+    await Video.findByIdAndDelete(req.params.id);
   }
 
   fs.unlink(path.join(__dirname, "../", video.path), (error) => {
@@ -144,21 +184,269 @@ const deleteVideo = async (req, res) => {
   res.send("removed");
 };
 
+// const getVideo = async (req, res) => {
+//   if (!req?.params?.id)
+//     return res.status(400).json({ message: "Video ID required." });
+//   const video = await Video.findOne({ _id: req.params.id })
+//     .populate({ path: "author", select: ["username", "avatar", "subscribe"] })
+//     .exec();
+
+//   if (!video) {
+//     return res
+//       .status(204)
+//       .json({ message: `No video matches ID ${req.params.id}.` });
+//   }
+//   video._doc.author._doc.subscribe = video._doc.author._doc.subscribe.length;
+//   video._doc.image = videoImage(video.videoLink);
+//   res.json(video);
+// };
+
+//! add if condition and return
 const getVideo = async (req, res) => {
   if (!req?.params?.id)
     return res.status(400).json({ message: "Video ID required." });
-  const video = await Video.findOne({ _id: req.params.id })
-    .populate({ path: "author", select: ["username", "avatar", "subscribe"] })
-    .exec();
 
-  if (!video) {
-    return res
-      .status(204)
-      .json({ message: `No video matches ID ${req.params.id}.` });
+  // const hasReport = await Report.find({
+  //   author: req.userId,
+  //   video: req.params.id,
+  // });
+
+  let mainProject = {
+    _id: 1,
+    title: 1,
+    description: 1,
+    dubbingLanguage: 1,
+    videoLanguage: 1,
+    category: 1,
+    videoLink: 1,
+    type: 1,
+    startMinute: 1,
+    startSecond: 1,
+    endMinute: 1,
+    endSecond: 1,
+    list: 1,
+    notify: 1,
+    views: { $size: "$views" },
+    like: { $size: "$like" },
+    dislike: { $size: "$dislike" },
+    updatedAt: 1,
+    videoImage: 1,
+    tag: 1,
+    path: 1,
+    comments: 1,
+    reports: 1,
+    "author.username": "$author.username",
+    "author._id": "$author._id",
+    "author.coffeeLink": "$author.coffeeLink",
+    "author.avatar": "$author.avatar",
+    "author.usersSubscribe": {
+      $size: "$author.usersSubscribe",
+    },
+    remove: {
+      $cond: [
+        {
+          $and: [
+            { $eq: ["$author._id", req.userId] },
+            { $ne: [req.userId, null] },
+            { $ne: [req.userId, undefined] },
+          ],
+        },
+        true,
+        false,
+      ],
+    },
+    watchLater: {
+      $cond: [
+        { $in: [mongoose.Types.ObjectId(req.params.id), "$author.watchLater"] },
+        true,
+        false,
+      ],
+    },
+    isSubscribe: {
+      $cond: [
+        {
+          $in: [req.userId, "$author.usersSubscribe"],
+        },
+        true,
+        false,
+      ],
+    },
+    lists: 1,
+  };
+
+  let commentProject = {
+    _id: 1,
+    commentOn: 1,
+    type: 1,
+    text: 1,
+    updatedAt: 1,
+    comments: 1,
+    like: {
+      $size: "$like",
+    },
+    dislike: {
+      $size: "$dislike",
+    },
+    isLike: {
+      $cond: [{ $in: [req.userId, "$like"] }, true, false],
+    },
+    isDislike: {
+      $cond: [{ $in: [req.userId, "$dislike"] }, true, false],
+    },
+    "commentUser._id": 1,
+    "commentUser.username": 1,
+    "commentUser.avatar": 1,
+  };
+
+  if (req.userId) {
+    mainProject = {
+      ...mainProject,
+      "author.isUsersSubscribe": {
+        $cond: [{ $in: [req.userId, "$author.usersSubscribe"] }, true, false],
+      },
+      isLike: {
+        $cond: [{ $in: [req.userId, "$like"] }, true, false],
+      },
+      isDislike: {
+        $cond: [{ $in: [req.userId, "$dislike"] }, true, false],
+      },
+      // report: hasReport,
+    };
+
+    commentProject = {
+      ...commentProject,
+      isLike: {
+        $cond: [{ $in: [req.userId, "$like"] }, true, false],
+      },
+      isDislike: {
+        $cond: [{ $in: [req.userId, "$dislike"] }, true, false],
+      },
+    };
   }
-  video._doc.author._doc.subscribe = video._doc.author._doc.subscribe.length;
-  video._doc.image = videoImage(video.videoLink);
-  res.json(video);
+
+  const videos = await Video.aggregate([
+    { $match: { _id: mongoose.Types.ObjectId(req.params.id) } },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "author",
+        foreignField: "_id",
+        as: "author",
+      },
+    },
+    {
+      $lookup: {
+        from: "lists",
+        let: { listtt: "$list" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ["$_id", "$$listtt"],
+              },
+            },
+          },
+
+          {
+            $lookup: {
+              from: "videos",
+              localField: "video",
+              foreignField: "_id",
+              as: "listVideo",
+            },
+          },
+
+          {
+            $project: {
+              "listVideo._id": 1,
+              "listVideo.description": 1,
+              "listVideo.like": { $size: "$listVideo.like" },
+              // "listVideo.remove": 1,ddddddddddddd
+              "listVideo.title": 1,
+              "listVideo.updatedAt": 1,
+              "listVideo.videoImage": 1,
+              "listVideo.videoLink": 1,
+              "listVideo.views": { $size: "$listVideo.views" },
+            },
+          },
+        ],
+        as: "lists",
+      },
+    },
+    {
+      $unwind: "$lists",
+    },
+    {
+      $lookup: {
+        from: "reports",
+        let: { reports: "$reports" },
+        pipeline: [
+          {
+            $match: {
+              author: { $eq: req.userId ? req.userId.toString() : "" },
+              video: { $eq: req.params.id },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+            },
+          },
+        ],
+
+        as: "reports",
+      },
+    },
+
+    {
+      $unwind: "$author",
+    },
+    {
+      $lookup: {
+        from: "comments",
+        let: { commentsss: "$comments" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $in: ["$_id", "$$commentsss"],
+              },
+            },
+          },
+
+          {
+            $lookup: {
+              from: "users",
+              localField: "author",
+              foreignField: "_id",
+              as: "commentUser",
+            },
+          },
+          {
+            $unwind: "$commentUser",
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $project: commentProject,
+          },
+        ],
+        as: "comments",
+      },
+    },
+
+    {
+      $project: mainProject,
+    },
+  ]);
+
+  await Video.findByIdAndUpdate(req.params.id, {
+    $push: { views: req.userId ? req.userId : "guest" },
+  });
+
+  res.json(videos);
 };
 
 module.exports = {

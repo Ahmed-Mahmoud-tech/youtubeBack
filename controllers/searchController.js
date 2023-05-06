@@ -144,7 +144,6 @@ const mainSearch = async (req, res) => {
       {
         $project: {
           _id: "$mainVideo._id",
-          X: "$_id",
           avatar: 1,
           username: 1,
           remove: {

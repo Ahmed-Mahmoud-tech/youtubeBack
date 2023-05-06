@@ -13,4 +13,4 @@ const videoImage = (VideoLink) => {
   return `https://img.youtube.com/vi/${getId(VideoLink)}/maxresdefault.jpg`;
 };
 
-module.exports = { videoImage };
+module.exports = { videoImage, getId };

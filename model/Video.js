@@ -4,6 +4,11 @@ const Schema = mongoose.Schema;
 
 const videoSchema = new Schema(
   {
+    list: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: "",
+      ref: "List",
+    },
     title: {
       type: String,
       required: true,
@@ -50,7 +55,6 @@ const videoSchema = new Schema(
     endSecond: {
       type: String,
     },
-
     notify: {
       type: String,
     },
@@ -63,7 +67,7 @@ const videoSchema = new Schema(
       type: String,
     },
     views: {
-      type: [mongoose.Schema.Types.ObjectId],
+      type: Array,
       default: [],
     },
     author: {
@@ -75,7 +79,6 @@ const videoSchema = new Schema(
       type: [mongoose.Schema.Types.ObjectId],
       default: [],
     },
-
     dislike: {
       type: [mongoose.Schema.Types.ObjectId],
       default: [],
@@ -93,6 +96,7 @@ const videoSchema = new Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Comment",
+        default: [],
       },
     ],
   },

@@ -51,11 +51,7 @@ const userSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Video",
   },
-  usersSubscribe: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: "User",
-    default: [],
-  },
+
   like: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: "Video",
@@ -79,6 +75,28 @@ const userSchema = new Schema({
   coffee: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: "Coffee",
+    default: [],
+  },
+  coffeeLink: {
+    type: String,
+    default: "https://ko-fi.com/langtupe",
+  },
+  notification: {
+    type: Array,
+    default: [],
+  },
+  list: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: "List",
+    default: [],
+  },
+  report: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: "Report",
+    default: [],
+  },
+  support: {
+    type: [mongoose.Schema.Types.ObjectId],
     default: [],
   },
 });

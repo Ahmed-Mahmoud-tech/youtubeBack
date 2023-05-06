@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../model/User");
+const mongoose = require("mongoose");
+
 const verifyJWT = (req, res, next) => {
   const authHeader = req.headers.authorization || req.headers.Authorization;
   if (!authHeader?.startsWith("Bearer ")) return res.sendStatus(401);
@@ -30,6 +32,7 @@ const verifyJWT = (req, res, next) => {
             username: refreshDecoded.username,
           }).exec();
 
+          if (!foundUser) res.sendStatus(401);
           // Refresh token was still valid
           const roles = Object.values(foundUser.roles);
           const id = foundUser._id;
@@ -69,7 +72,7 @@ const verifyJWT = (req, res, next) => {
     } else {
       req.user = decoded.UserInfo.username;
       req.roles = Object.values(decoded.UserInfo.roles);
-      req.userId = decoded.UserInfo.id;
+      req.userId = mongoose.Types.ObjectId(decoded.UserInfo.id);
       next();
     }
   });

@@ -2,9 +2,8 @@ const List = require("../model/List");
 const User = require("../model/User");
 const Video = require("../model/Video");
 
-const userSearchLimit = 3;
 const mainSearch = async (req, res) => {
-  const limit = parseInt(req.query.limit) || 20;
+  const limit = Math.floor(parseInt(req.query.limit) / 3) || 10;
   const page = parseInt(req.query.page) || 1;
   if (!req?.params?.search)
     return res.status(400).json({ message: "List ID required." });
@@ -81,10 +80,10 @@ const mainSearch = async (req, res) => {
         },
       },
       {
-        $skip: (page - 1) * userSearchLimit,
+        $skip: (page - 1) * limit,
       },
       {
-        $limit: userSearchLimit,
+        $limit: limit,
       },
     ]);
 
@@ -170,6 +169,12 @@ const mainSearch = async (req, res) => {
           SearchType: "user",
         },
       },
+      {
+        $skip: (page - 1) * limit,
+      },
+      {
+        $limit: limit,
+      },
     ]);
 
     //!
@@ -210,16 +215,15 @@ const mainSearch = async (req, res) => {
       },
       {
         $project: {
-          id: "$firstChild._id",
+          _id: "$firstChild._id",
           title: 1,
-          description: "$firstChild.description",
+          description: 1,
           like: { $size: "$firstChild.like" },
           views: { $size: "$firstChild.views" },
           videoImage: "$firstChild.videoImage",
           videoLink: "$firstChild.videoLink",
           updatedAt: "$firstChild.updatedAt",
           username: "$author.username",
-
           remove: {
             $cond: [
               {
@@ -233,15 +237,19 @@ const mainSearch = async (req, res) => {
               false,
             ],
           },
-
           avatar: "$author.avatar",
           SearchType: "list",
           videoLength: 1,
         },
       },
+      {
+        $skip: (page - 1) * limit,
+      },
+      {
+        $limit: limit,
+      },
     ]);
 
-    console.log(req.userId, "ddddd");
     // ...aggregateArray,
 
     //!
@@ -274,7 +282,7 @@ const mainSearch = async (req, res) => {
     //   Video._doc.listLength = videoLength[index];
     //   Video._doc.title = videoTitles[index];
     // });
-
+    console.log("11111111111111", lists, "00000000000000000");
     result = [...users, ...videos, ...lists];
     // result = [...users, ...videos, ...firstVideoIdsData];
     // console.log({ users }, { videos }, { lists });
@@ -285,6 +293,227 @@ const mainSearch = async (req, res) => {
   res.json(result);
 };
 
+const usersAction = async (req, res) => {
+  console.log(
+    "here*******************************************************************usersAction******"
+  );
+  const action = req.params.action;
+  console.log(action, "ddddddddddddd00");
+  const page = parseInt(req.query.page) || 1;
+  const limit = Math.floor(parseInt(req.query.limit) / 3) || 10;
+
+  console.log({ action });
+  const videos = await User.aggregate([
+    { $match: { _id: req.userId } },
+
+    {
+      $lookup: {
+        from: "videos",
+        localField: `${action}`,
+        foreignField: "_id",
+        as: action,
+      },
+    },
+    {
+      $addFields: {
+        actionVideo: {
+          $map: {
+            input: `$${action}`,
+            as: "target",
+            in: {
+              like: { $size: `$$target.like` },
+              views: { $size: `$$target.views` },
+              _id: `$$target._id`,
+              description: `$$target.description`,
+              title: `$$target.title`,
+              updatedAt: `$$target.updatedAt`,
+              videoImage: `$$target.videoImage`,
+              videoLink: `$$target.videoLink`,
+              remove: {
+                $cond: [
+                  {
+                    $and: [
+                      {
+                        $eq: ["$_id", req.userId],
+                      },
+                      { $ne: [req.userId, null] },
+                      { $ne: [req.userId, undefined] },
+                    ],
+                  },
+                  true,
+                  false,
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        actionVideo: 1,
+        username: 1,
+        avatar: 1,
+      },
+    },
+    {
+      $skip: (page - 1) * limit,
+    },
+    {
+      $limit: limit,
+    },
+  ]);
+  console.log(videos[0].actionVideo, "00000");
+
+  const data = [];
+  videos[0].actionVideo.map((item) => {
+    item.username = videos[0].username;
+    item.avatar = videos[0].avatar;
+    data.push(item);
+  });
+  res.json(data);
+};
+
+const usersSubscribe = async (req, res) => {
+  console.log(
+    "here*******************************************************************usersSubscribe******"
+  );
+  const action = req.params.action;
+  const page = parseInt(req.query.page) || 1;
+  const limit = Math.floor(parseInt(req.query.limit) / 3) || 10;
+
+  const videos = await User.aggregate([
+    { $match: { _id: req.userId } },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: `subscribe`,
+        foreignField: "_id",
+        pipeline: [
+          {
+            $lookup: {
+              from: "videos",
+              localField: `mainVideo`,
+              foreignField: "_id",
+              as: "userMainVideo",
+            },
+          },
+          {
+            $addFields: {
+              userMainVideo: { $arrayElemAt: ["$userMainVideo", 0] },
+            },
+          },
+          {
+            $project: {
+              username: 1,
+              avatar: 1,
+              videoImage: "$userMainVideo.videoImage",
+              _id: "$userMainVideo._id",
+              videoLink: "$userMainVideo.videoLink",
+              title: "$userMainVideo.title",
+              description: "$userMainVideo.description",
+              updatedAt: "$userMainVideo.updatedAt",
+              like: { $size: "$userMainVideo.like" },
+              views: { $size: "$userMainVideo.views" },
+              videoLength: "0",
+            },
+          },
+        ],
+        as: "subscribed",
+      },
+    },
+    {
+      $project: {
+        subscribed: "$subscribed",
+      },
+    },
+
+    {
+      $skip: (page - 1) * limit,
+    },
+    {
+      $limit: limit,
+    },
+  ]);
+
+  res.json(videos[0].subscribed);
+};
+
+const usersList = async (req, res) => {
+  console.log(
+    "here*******************************************************************usersList******"
+  );
+  const page = parseInt(req.query.page) || 1;
+  const limit = Math.floor(parseInt(req.query.limit) / 3) || 10;
+
+  const videos = await User.aggregate([
+    { $match: { _id: req.userId } },
+
+    {
+      $lookup: {
+        from: "lists",
+        let: { theListTitle: "$title" },
+        pipeline: [
+          {
+            $lookup: {
+              from: "videos",
+              localField: "video",
+              foreignField: "_id",
+              as: "listVideo",
+            },
+          },
+          {
+            $addFields: {
+              videoLength: { $size: "$listVideo" },
+              firstElement: { $arrayElemAt: ["$listVideo", 0] },
+              theListTitle: "$theListTitle",
+            },
+          },
+          {
+            $project: {
+              videoImage: "$firstElement.videoImage",
+              _id: "$firstElement._id",
+              videoLink: "$firstElement.videoLink",
+              title: 1,
+              description: 1,
+              videoLength: 1,
+            },
+          },
+        ],
+        as: "lists",
+      },
+    },
+    {
+      $project: {
+        username: 1,
+        theList: 1,
+        avatar: 1,
+        lists: 1,
+      },
+    },
+    {
+      $skip: (page - 1) * limit,
+    },
+    {
+      $limit: limit,
+    },
+  ]);
+
+  const data = [];
+  videos[0].lists.map((item) => {
+    item.username = videos[0].username;
+    item.avatar = videos[0].avatar;
+    if (item.videoLength > 0) {
+      data.push(item);
+    }
+  });
+  res.json(data);
+};
+
 module.exports = {
+  usersAction,
   mainSearch,
+  usersList,
+  usersSubscribe,
 };

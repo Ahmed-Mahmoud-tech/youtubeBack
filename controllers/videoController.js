@@ -47,12 +47,25 @@ const createNewVideo = async (req, res) => {
     try {
       if (req.body.list) {
         req.body.list = mongoose.Types.ObjectId(req.body.list);
+      } else {
+        delete req.body.list;
       }
+      console.log(req.body);
+
+      const listLength = async () => {
+        if (req.body.list) {
+          const listLengthR = await List.findById(req.body.list);
+          return listLengthR.video.length + 1;
+        } else {
+          return 0;
+        }
+      };
 
       const videoCreation = await Video.create({
         ...req.body,
         author: req.userId,
         videoImage: videoImage(req.body.videoLink),
+        order: await listLength(),
       });
 
       if (req.body.list) {
@@ -60,6 +73,18 @@ const createNewVideo = async (req, res) => {
           $push: { video: videoCreation._id },
         });
       }
+
+      // await User.findByIdAndUpdate(req.userId, {
+      //   $push: { myVideos: videoCreation._id },
+      // });
+
+      await User.findById(req.userId).then((doc) => {
+        doc.myVideos.push(videoCreation._id);
+        if (!doc.mainVideo) {
+          doc.mainVideo = videoCreation._id;
+        }
+        return doc.save();
+      });
 
       res.status(201).send("created successfully");
     } catch (err) {
@@ -107,6 +132,7 @@ const patchVideo = async (req, res) => {
     if (req.body.like != null) {
       toggleLike(
         Video,
+        User,
         "like",
         "dislike",
         req.userId,
@@ -117,6 +143,7 @@ const patchVideo = async (req, res) => {
     } else if (req.body.dislike != null) {
       toggleLike(
         Video,
+        User,
         "dislike",
         "like",
         req.userId,
@@ -172,6 +199,16 @@ const deleteVideo = async (req, res) => {
     await Comment.deleteMany({ _id: { $in: commentIds } });
     // delete video itself
     await Video.findByIdAndDelete(req.params.id);
+
+    await User.findByIdAndUpdate(req.userId, {
+      $pull: { myVideos: req.params.id },
+    });
+
+    if (video.list) {
+      await List.findByIdAndUpdate(video.list, {
+        $pull: { video: req.params.id },
+      });
+    }
   }
 
   fs.unlink(path.join(__dirname, "../", video.path), (error) => {
@@ -183,23 +220,6 @@ const deleteVideo = async (req, res) => {
   });
   res.send("removed");
 };
-
-// const getVideo = async (req, res) => {
-//   if (!req?.params?.id)
-//     return res.status(400).json({ message: "Video ID required." });
-//   const video = await Video.findOne({ _id: req.params.id })
-//     .populate({ path: "author", select: ["username", "avatar", "subscribe"] })
-//     .exec();
-
-//   if (!video) {
-//     return res
-//       .status(204)
-//       .json({ message: `No video matches ID ${req.params.id}.` });
-//   }
-//   video._doc.author._doc.subscribe = video._doc.author._doc.subscribe.length;
-//   video._doc.image = videoImage(video.videoLink);
-//   res.json(video);
-// };
 
 //! add if condition and return
 const getVideo = async (req, res) => {
@@ -224,7 +244,6 @@ const getVideo = async (req, res) => {
     startSecond: 1,
     endMinute: 1,
     endSecond: 1,
-    list: 1,
     notify: 1,
     views: { $size: "$views" },
     like: { $size: "$like" },
@@ -239,9 +258,10 @@ const getVideo = async (req, res) => {
     "author._id": "$author._id",
     "author.coffeeLink": "$author.coffeeLink",
     "author.avatar": "$author.avatar",
-    "author.usersSubscribe": {
+    "author.usersSubscribeCount": {
       $size: "$author.usersSubscribe",
     },
+
     remove: {
       $cond: [
         {
@@ -265,12 +285,15 @@ const getVideo = async (req, res) => {
     isSubscribe: {
       $cond: [
         {
-          $in: [req.userId, "$author.usersSubscribe"],
+          $in: ["$author._id", "$author.usersSubscribe"],
         },
         true,
         false,
       ],
     },
+    usersSubscribe: "$author.usersSubscribe",
+    userid: "$author._id",
+
     lists: 1,
   };
 
@@ -338,16 +361,15 @@ const getVideo = async (req, res) => {
     {
       $lookup: {
         from: "lists",
-        let: { listtt: "$list" },
+        let: { listVid: "$list" },
         pipeline: [
           {
             $match: {
               $expr: {
-                $eq: ["$_id", "$$listtt"],
+                $eq: ["$_id", "$$listVid"],
               },
             },
           },
-
           {
             $lookup: {
               from: "videos",
@@ -356,27 +378,38 @@ const getVideo = async (req, res) => {
               as: "listVideo",
             },
           },
-
+          {
+            $addFields: {
+              listVideo: {
+                $map: {
+                  input: "$listVideo",
+                  as: "listVideo",
+                  in: {
+                    like: { $size: "$$listVideo.like" },
+                    views: { $size: "$$listVideo.views" },
+                    _id: "$$listVideo._id",
+                    description: "$$listVideo.description",
+                    title: "$$listVideo.title",
+                    updatedAt: "$$listVideo.updatedAt",
+                    videoImage: "$$listVideo.videoImage",
+                    videoLink: "$$listVideo.videoLink",
+                  },
+                },
+              },
+            },
+          },
           {
             $project: {
-              "listVideo._id": 1,
-              "listVideo.description": 1,
-              "listVideo.like": { $size: "$listVideo.like" },
-              // "listVideo.remove": 1,ddddddddddddd
-              "listVideo.title": 1,
-              "listVideo.updatedAt": 1,
-              "listVideo.videoImage": 1,
-              "listVideo.videoLink": 1,
-              "listVideo.views": { $size: "$listVideo.views" },
+              listVideo: 1,
             },
           },
         ],
         as: "lists",
       },
     },
-    {
-      $unwind: "$lists",
-    },
+    // {
+    //   $unwind: "$lists",
+    // },
     {
       $lookup: {
         from: "reports",
@@ -441,11 +474,11 @@ const getVideo = async (req, res) => {
       $project: mainProject,
     },
   ]);
-
   await Video.findByIdAndUpdate(req.params.id, {
     $push: { views: req.userId ? req.userId : "guest" },
   });
 
+  console.log({ videos });
   res.json(videos);
 };
 

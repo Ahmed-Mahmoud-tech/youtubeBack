@@ -25,7 +25,6 @@ const deleteUser = async (req, res) => {
 
 const getUser = async (req, res) => {
   const userId = req.userId || req.params?.id;
-  console.log({ userId });
   if (!userId) return res.status(400).json({ message: "User ID required" });
   const user = await User.findOne({ _id: userId })
     .select(

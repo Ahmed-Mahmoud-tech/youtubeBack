@@ -41,17 +41,13 @@ const getUserList = async (req, res) => {
 const createNewList = async (req, res) => {
   if (req.body.title) {
     try {
-      console.log("0", { ...req.body, author: req.userId });
       const newList = await List.create({
         ...req.body,
         author: req.userId,
       });
-      console.log("5");
       await User.findByIdAndUpdate(req.userId, {
         $push: { list: newList._id },
       });
-      console.log("10");
-
       res.status(201).send("created successfully");
     } catch (err) {
       console.error(err);
@@ -63,9 +59,8 @@ const createNewList = async (req, res) => {
 
 const patchList = async (req, res) => {
   const updates = Object.keys(req.body);
-
   //! patch validation
-  const allowedUpdates = ["video", "title"];
+  const allowedUpdates = ["video", "title", "description"];
   const isValidOperation = updates.every((update) =>
     allowedUpdates.includes(update)
   );

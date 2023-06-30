@@ -47,7 +47,8 @@ app.use("/api/logout", require("./routes/logout"));
 app.use("/api/video", require("./routes/api/videoRouter"));
 app.use("/api/comment", require("./routes/api/commentRouter"));
 app.use("/api/list", require("./routes/api/listRouter"));
-app.use("/api/search", require("./routes/api/searchRouter"));
+app.use("/api/video_group", require("./routes/api/videoGroupRouter"));
+app.use("/api/help", require("./routes/api/helpRouter"));
 
 app.use(verifyJWT);
 app.use("/api/report", require("./routes/api/reportRouter"));

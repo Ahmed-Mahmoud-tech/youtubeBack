@@ -51,8 +51,12 @@ const userSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Video",
   },
-
   like: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: "Video",
+    default: [],
+  },
+  myVideos: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: "Video",
     default: [],
@@ -98,6 +102,9 @@ const userSchema = new Schema({
   support: {
     type: [mongoose.Schema.Types.ObjectId],
     default: [],
+  },
+  supportIframe: {
+    type: String,
   },
 });
 

@@ -10,7 +10,6 @@ const verifyJWT = (req, res, next) => {
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
       //!refreshToken
-
       const cookies = req.cookies;
       if (!cookies?.jwt) {
         return res.sendStatus(401);
@@ -31,7 +30,6 @@ const verifyJWT = (req, res, next) => {
           const foundUser = await User.findOne({
             username: refreshDecoded.username,
           }).exec();
-
           if (!foundUser) res.sendStatus(401);
           // Refresh token was still valid
           const roles = Object.values(foundUser.roles);

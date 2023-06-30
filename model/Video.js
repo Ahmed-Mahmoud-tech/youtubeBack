@@ -6,7 +6,6 @@ const videoSchema = new Schema(
   {
     list: {
       type: mongoose.Schema.Types.ObjectId,
-      default: "",
       ref: "List",
     },
     title: {
@@ -99,6 +98,10 @@ const videoSchema = new Schema(
         default: [],
       },
     ],
+    order: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: { createdAt: "created_at" } }
 );

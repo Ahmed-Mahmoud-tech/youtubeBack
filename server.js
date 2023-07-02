@@ -68,6 +68,7 @@ app.all("*", (req, res) => {
 });
 
 app.use(errorHandler);
+mongoose.set("strictQuery", false);
 
 mongoose.connection.once("open", () => {
   console.log("Connected to MongoDB");

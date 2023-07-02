@@ -225,7 +225,11 @@ const deleteVideo = async (req, res) => {
 const getVideo = async (req, res) => {
   if (!req?.params?.id)
     return res.status(400).json({ message: "Video ID required." });
-
+  console.log(
+    "$$$$$$$$$$$$$$$$$$$$$$$$$$",
+    req.userId,
+    "$$$$$$$$$$$$$$$$$$$$$$$$$$"
+  );
   // const hasReport = await Report.find({
   //   author: req.userId,
   //   video: req.params.id,
@@ -253,6 +257,7 @@ const getVideo = async (req, res) => {
     tag: 1,
     path: 1,
     comments: 1,
+    order: 1,
     reports: 1,
     "author.username": "$author.username",
     "author._id": "$author._id",
@@ -285,14 +290,15 @@ const getVideo = async (req, res) => {
     isSubscribe: {
       $cond: [
         {
-          $in: ["$author._id", "$author.usersSubscribe"],
+          $in: [req.userId, "$author.usersSubscribe"],
         },
         true,
         false,
       ],
     },
-    usersSubscribe: "$author.usersSubscribe",
-    userid: "$author._id",
+    // usersSubscribe: "$author.usersSubscribe",
+    // userid: req.userId,
+    // userid: "$author._id",
 
     lists: 1,
   };
@@ -361,6 +367,8 @@ const getVideo = async (req, res) => {
     {
       $lookup: {
         from: "lists",
+        localField: "list",
+        foreignField: "_id",
         let: { listVid: "$list" },
         pipeline: [
           {
@@ -370,6 +378,7 @@ const getVideo = async (req, res) => {
               },
             },
           },
+
           {
             $lookup: {
               from: "videos",
@@ -393,6 +402,7 @@ const getVideo = async (req, res) => {
                     updatedAt: "$$listVideo.updatedAt",
                     videoImage: "$$listVideo.videoImage",
                     videoLink: "$$listVideo.videoLink",
+                    order: "$$listVideo.order",
                   },
                 },
               },
@@ -401,6 +411,8 @@ const getVideo = async (req, res) => {
           {
             $project: {
               listVideo: 1,
+              title: 1,
+              description: 1,
             },
           },
         ],
@@ -478,8 +490,29 @@ const getVideo = async (req, res) => {
     $push: { views: req.userId ? req.userId : "guest" },
   });
 
-  console.log({ videos });
   res.json(videos);
+};
+
+const updateOrder = async (req, res) => {
+  const updatePromises = req.body.map(async (item) => {
+    try {
+      const { _id, order } = item;
+      await Video.findByIdAndUpdate(_id, { order });
+      console.log(`Updated order for video with _id: ${_id}`);
+    } catch (error) {
+      console.error(`Error updating video with _id: ${_id}`, error);
+    }
+  });
+
+  Promise.all(updatePromises)
+    .then(() => {
+      console.log("All videos updated successfully");
+    })
+    .catch((error) => {
+      console.error("Error updating videos", error);
+    });
+
+  res.send("ok");
 };
 
 module.exports = {
@@ -488,4 +521,5 @@ module.exports = {
   patchVideo,
   deleteVideo,
   getVideo,
+  updateOrder,
 };

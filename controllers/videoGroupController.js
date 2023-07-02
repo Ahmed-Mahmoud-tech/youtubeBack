@@ -12,6 +12,7 @@ const mainSearch = async (req, res) => {
     // Use a regular expression to match posts by a partial name
 
     const regex = new RegExp(req.params.search, "gi");
+    console.log("$$", regex, "$$");
     const videos = await Video.aggregate([
       {
         $match: {
@@ -138,6 +139,12 @@ const mainSearch = async (req, res) => {
       {
         $addFields: {
           mainVideo: { $arrayElemAt: ["$video", 0] },
+        },
+      },
+      {
+        $match: {
+          // Specify the condition to exclude items
+          "mainVideo.title": { $exists: true },
         },
       },
       {
@@ -282,7 +289,6 @@ const mainSearch = async (req, res) => {
     //   Video._doc.listLength = videoLength[index];
     //   Video._doc.title = videoTitles[index];
     // });
-    console.log("11111111111111", lists, "00000000000000000");
     result = [...users, ...videos, ...lists];
     // result = [...users, ...videos, ...firstVideoIdsData];
     // console.log({ users }, { videos }, { lists });
@@ -453,6 +459,8 @@ const usersList = async (req, res) => {
     {
       $lookup: {
         from: "lists",
+        localField: "list",
+        foreignField: "_id",
         let: { theListTitle: "$title" },
         pipeline: [
           {

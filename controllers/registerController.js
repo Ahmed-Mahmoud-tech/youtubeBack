@@ -14,8 +14,14 @@ const handleNewUser = async (req, res) => {
   try {
     //encrypt the password
     const hashedPwd = await bcrypt.hash(pwd, 10);
-    console.log("111111111111111111111");
-
+    console.log(
+      "00000000000",
+      hashedPwd,
+      "111111111111111111111",
+      user,
+      "22222222222"
+    );
+    //node --trace-deprecation
     //create and store the new user
     const result = await User.create({
       username: user,
